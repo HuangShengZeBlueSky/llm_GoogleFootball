@@ -1,0 +1,25 @@
+# ── LLM 配置 ──────────────────────────────────────────
+# 注意：实际的 api_key 和 base_url 从 .env 文件加载，此处为 fallback
+llm:
+  model: "gemini-3-flash"
+  api_key: ""                             # 从 .env 加载
+  base_url: ""                            # 从 .env 加载
+  temperature: 0.3
+  max_tokens: 256
+
+# ── 环境配置 ──────────────────────────────────────────
+env:
+  scenario: "academy_3_vs_1_with_keeper"
+  representation: "raw"
+  rewards: "scoring,checkpoints"
+  render: false
+  write_video: true
+  write_full_episode_dumps: true
+  logdir: "./grf_logs"
+  num_controlled_players: 1
+
+# ── 实验配置 ──────────────────────────────────────────
+experiment:
+  num_episodes: 10
+  max_steps_per_episode: 400
+  log_dir: "./logs"

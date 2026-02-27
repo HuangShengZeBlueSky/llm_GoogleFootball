@@ -1,0 +1,5 @@
+gfootball
+openai
+pyyaml
+numpy
+python-dotenv
