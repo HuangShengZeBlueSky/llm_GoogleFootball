@@ -44,10 +44,15 @@ class LLMClient:
         max_tokens: int = 256,
         timeout: float = 10.0,
     ):
+        normalized_base_url = self._normalize_base_url(base_url)
         self.model = model
         self.temperature = temperature
         self.max_tokens = max_tokens
-        self.client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url=normalized_base_url,
+            timeout=timeout,
+        )
         self.total_tokens = 0
         self.call_count = 0
 
@@ -115,3 +120,15 @@ class LLMClient:
                 self.total_tokens / self.call_count if self.call_count else 0
             ),
         }
+
+    @staticmethod
+    def _normalize_base_url(base_url: str | None) -> str | None:
+        if not base_url:
+            return base_url
+
+        normalized = base_url.strip().rstrip("/")
+        for suffix in ("/chat/completions", "/completions"):
+            if normalized.endswith(suffix):
+                normalized = normalized[: -len(suffix)]
+                break
+        return normalized

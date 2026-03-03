@@ -58,13 +58,13 @@ class GameLogger:
         self._csv_fh.flush()
 
         self._ep_details.append({
-            "step": step,
-            "ball": [round(ball[0], 4), round(ball[1], 4)],
-            "active": obs["active"],
-            "action": action_id,
+            "step": int(step),
+            "ball": [round(float(ball[0]), 4), round(float(ball[1]), 4)],
+            "active": int(obs["active"]),
+            "action": int(action_id),
             "action_name": action_name,
             "reason": reason,
-            "reward": reward,
+            "reward": float(reward),
         })
 
     # ─── per-episode ────────────────────────────────────
@@ -72,12 +72,12 @@ class GameLogger:
     def log_episode_end(self, episode, total_steps, total_reward,
                         scored, llm_stats):
         summary = {
-            "episode": episode,
-            "steps": total_steps,
-            "reward": round(total_reward, 4),
-            "scored": scored,
-            "llm_calls": llm_stats.get("total_calls", 0),
-            "tokens": llm_stats.get("total_tokens", 0),
+            "episode": int(episode),
+            "steps": int(total_steps),
+            "reward": round(float(total_reward), 4),
+            "scored": bool(scored),
+            "llm_calls": int(llm_stats.get("total_calls", 0)),
+            "tokens": int(llm_stats.get("total_tokens", 0)),
             "ts": datetime.now().isoformat(),
         }
         self.episode_summaries.append(summary)

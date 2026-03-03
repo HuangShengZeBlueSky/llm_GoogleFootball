@@ -3,3 +3,6 @@ openai
 pyyaml
 numpy
 python-dotenv
+psutil
+six
+gym<0.26

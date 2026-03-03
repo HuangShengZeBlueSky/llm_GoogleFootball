@@ -98,6 +98,8 @@ def run_episode(
         compact_obs:   使用紧凑观测文本（省 token）
     """
     obs = env.reset()
+    if isinstance(obs, tuple):
+        obs = obs[0]
     if isinstance(obs, list):
         obs = obs[0]
 
@@ -138,7 +140,12 @@ def run_episode(
             result = {"elapsed": 0, "tokens": 0}
 
         # env step
-        next_obs, reward, done, info = env.step(cur_action)
+        step_ret = env.step(cur_action)
+        if isinstance(step_ret, tuple) and len(step_ret) == 5:
+            next_obs, reward, terminated, truncated, info = step_ret
+            done = terminated or truncated
+        else:
+            next_obs, reward, done, info = step_ret
         if isinstance(next_obs, list):
             next_obs = next_obs[0]
         if isinstance(reward, list):
@@ -236,7 +243,7 @@ def main():
         run_episode(
             env, llm, logger,
             episode_id=ep,
-            max_steps=cfg["experiment"].get("max_steps_per_episode", 10),
+            max_steps=cfg["experiment"].get("max_steps_per_episode", 400),
             call_interval=args.interval,
             verbose=args.verbose,
             compact_obs=args.compact,
