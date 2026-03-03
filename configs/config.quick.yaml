@@ -1,0 +1,30 @@
+llm:
+  model: "gemini-3-flash"
+  provider: "openai_compatible"
+  api_key: ""
+  base_url: ""
+  temperature: 0.3
+  max_tokens: 256
+  timeout: 10
+  max_retries: 5
+  retry_backoff_base: 0.8
+
+env:
+  scenario: "academy_3_vs_1_with_keeper"
+  representation: "raw"
+  rewards: "scoring,checkpoints"
+  render: false
+  write_video: true
+  write_full_episode_dumps: true
+  logdir: "./grf_logs"
+  num_controlled_players: 1
+
+experiment:
+  num_episodes: 1
+  max_steps_per_episode: 40
+  log_dir: "./logs"
+
+memory:
+  working_size: 8
+  episodic_size: 200
+  retrieval_top_k: 3

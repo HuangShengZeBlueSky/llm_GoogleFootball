@@ -54,7 +54,12 @@ def parse_action(response: str) -> dict:
             act = int(data.get("action", data.get("动作", -1)))
             reason = str(data.get("reason", data.get("理由", "")))
             if 0 <= act <= 18:
-                return {"action": act, "reason": reason, "parse_success": True}
+                return {
+                    "action": act,
+                    "reason": reason,
+                    "parse_success": True,
+                    "parse_path": "json",
+                }
     except (json.JSONDecodeError, ValueError, TypeError):
         pass
 
@@ -63,13 +68,28 @@ def parse_action(response: str) -> dict:
     if nm:
         act = int(nm.group(1))
         if 0 <= act <= 18:
-            return {"action": act, "reason": response[:50], "parse_success": True}
+            return {
+                "action": act,
+                "reason": response[:50],
+                "parse_success": True,
+                "parse_path": "number",
+            }
 
     # 3) 关键词
     low = response.lower().strip()
     for kw, aid in ACTION_MAP.items():
         if kw in low:
-            return {"action": aid, "reason": response[:50], "parse_success": True}
+            return {
+                "action": aid,
+                "reason": response[:50],
+                "parse_success": True,
+                "parse_path": "keyword",
+            }
 
     # fallback
-    return {"action": 0, "reason": f"解析失败: {response[:50]}", "parse_success": False}
+    return {
+        "action": 0,
+        "reason": f"解析失败: {response[:50]}",
+        "parse_success": False,
+        "parse_path": "fallback",
+    }

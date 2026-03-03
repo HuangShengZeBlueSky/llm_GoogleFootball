@@ -2,10 +2,14 @@
 # 注意：实际的 api_key 和 base_url 从 .env 文件加载，此处为 fallback
 llm:
   model: "gemini-3-flash"
+  provider: "openai_compatible"
   api_key: ""                             # 从 .env 加载
   base_url: ""                            # 从 .env 加载
   temperature: 0.3
   max_tokens: 256
+  timeout: 10
+  max_retries: 5
+  retry_backoff_base: 0.8
 
 # ── 环境配置 ──────────────────────────────────────────
 env:
@@ -23,3 +27,9 @@ experiment:
   num_episodes: 10
   max_steps_per_episode: 400
   log_dir: "./logs"
+
+# ── 记忆配置 ──────────────────────────────────────────
+memory:
+  working_size: 8
+  episodic_size: 200
+  retrieval_top_k: 3

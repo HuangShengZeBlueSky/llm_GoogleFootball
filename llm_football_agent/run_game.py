@@ -10,7 +10,6 @@
 
 import argparse
 import os
-import sys
 
 # ── 加载 .env ────────────────────────────────────────────
 from dotenv import load_dotenv
@@ -34,6 +33,7 @@ from obs_to_text import obs_to_text, obs_to_text_compact
 from llm_client import LLMClient
 from action_parser import parse_action, ACTION_NAMES
 from logger import GameLogger
+from memory import MemoryManager
 
 
 # ── 配置 ────────────────────────────────────────────────
@@ -52,6 +52,8 @@ def merge_env_into_config(cfg: dict) -> dict:
         llm["api_key"] = os.getenv("LLM_API_KEY")
     if os.getenv("LLM_MODEL"):
         llm["model"] = os.getenv("LLM_MODEL")
+    if os.getenv("LLM_PROVIDER"):
+        llm["provider"] = os.getenv("LLM_PROVIDER")
     return cfg
 
 
@@ -84,7 +86,7 @@ def create_env(cfg: dict, use_mock: bool = False):
 # ── 单回合 ──────────────────────────────────────────────
 
 def run_episode(
-    env, llm: LLMClient, logger: GameLogger,
+    env, llm: LLMClient, logger: GameLogger, memory: MemoryManager,
     episode_id: int, max_steps: int,
     call_interval: int = 5,
     verbose: bool = True,
@@ -112,21 +114,31 @@ def run_episode(
 
     while not done and step < max_steps:
         call_llm = (step % call_interval == 0) or step == 0
+        obs_text = ""
+        memory_context = ""
+        parse_path = "reuse"
 
         if call_llm:
             obs_text = (obs_to_text_compact(obs) if compact_obs
                         else obs_to_text(obs, include_tactical_hints=True))
+            memory_context = memory.build_context(obs_text)
 
-            result = llm.decide(obs_text, history=history[-5:])
+            result = llm.decide(
+                obs_text,
+                history=history[-5:],
+                memory_context=memory_context,
+            )
 
             if "error" in result:
                 print(f"  [LLM Error @ step {step}] {result['error']}")
                 cur_action, cur_reason, parse_ok = 0, "LLM调用失败", False
+                parse_path = "fallback"
             else:
                 parsed = parse_action(result["raw_response"])
                 cur_action = parsed["action"]
                 cur_reason = parsed["reason"]
                 parse_ok = parsed["parse_success"]
+                parse_path = parsed.get("parse_path", "unknown")
 
                 if verbose:
                     print(
@@ -137,7 +149,14 @@ def run_episode(
                     )
         else:
             parse_ok = True
-            result = {"elapsed": 0, "tokens": 0}
+            result = {
+                "elapsed": 0,
+                "tokens": 0,
+                "raw_prompt": "",
+                "raw_response": "",
+                "retry_count": 0,
+                "error_type": "none",
+            }
 
         # env step
         step_ret = env.step(cur_action)
@@ -161,10 +180,24 @@ def run_episode(
             action_name=ACTION_NAMES.get(cur_action, "?"),
             reason=cur_reason,
             parse_success=parse_ok,
+            parse_path=parse_path,
             llm_time=result.get("elapsed", 0),
             tokens=result.get("tokens", 0),
+            retry_count=result.get("retry_count", 0),
+            error_type=result.get("error_type", "none"),
+            raw_prompt=result.get("raw_prompt", ""),
+            raw_response=result.get("raw_response", ""),
             reward=reward,
             cumulative_reward=total_reward,
+        )
+
+        memory.on_step(
+            step=step,
+            action=cur_action,
+            reason=cur_reason,
+            reward=reward,
+            obs_text=obs_text if call_llm else "",
+            parse_success=parse_ok,
         )
 
         if call_llm:
@@ -174,6 +207,7 @@ def run_episode(
         step += 1
 
     scored = obs["score"][0] > 0
+    memory.end_episode(episode=episode_id, scored=scored, total_reward=total_reward)
     logger.log_episode_end(
         episode=episode_id, total_steps=step,
         total_reward=total_reward, scored=scored,
@@ -201,6 +235,12 @@ def main():
                    help="LLM API key")
     p.add_argument("--model", type=str, default=None,
                    help="LLM model name")
+    p.add_argument("--provider", type=str, default=None,
+                   help="LLM provider: openai_compatible | gemini_native | qwen")
+    p.add_argument("--max_retries", type=int, default=None,
+                   help="请求失败最大重试次数")
+    p.add_argument("--timeout", type=float, default=None,
+                   help="单次请求超时秒数")
     args = p.parse_args()
 
     # 加载配置: config.yaml → .env 覆盖 → CLI 覆盖
@@ -214,6 +254,12 @@ def main():
         cfg["llm"]["api_key"] = args.api_key
     if args.model:
         cfg["llm"]["model"] = args.model
+    if args.provider:
+        cfg["llm"]["provider"] = args.provider
+    if args.max_retries is not None:
+        cfg["llm"]["max_retries"] = args.max_retries
+    if args.timeout is not None:
+        cfg["llm"]["timeout"] = args.timeout
 
     n_ep = args.episodes or cfg["experiment"]["num_episodes"]
 
@@ -233,15 +279,24 @@ def main():
         model=cfg["llm"]["model"],
         api_key=cfg["llm"]["api_key"],
         base_url=cfg["llm"].get("base_url"),
+        provider=cfg["llm"].get("provider", "openai_compatible"),
         temperature=cfg["llm"].get("temperature", 0.3),
         max_tokens=cfg["llm"].get("max_tokens", 1024),
+        timeout=cfg["llm"].get("timeout", 10.0),
+        max_retries=cfg["llm"].get("max_retries", 5),
+        retry_backoff_base=cfg["llm"].get("retry_backoff_base", 0.8),
     )
     logger = GameLogger(cfg["experiment"]["log_dir"])
+    memory = MemoryManager(
+        working_size=cfg.get("memory", {}).get("working_size", 8),
+        episodic_size=cfg.get("memory", {}).get("episodic_size", 200),
+        retrieval_top_k=cfg.get("memory", {}).get("retrieval_top_k", 3),
+    )
 
     for ep in range(n_ep):
         print(f"\n--- Episode {ep+1}/{n_ep} ---")
         run_episode(
-            env, llm, logger,
+            env, llm, logger, memory,
             episode_id=ep,
             max_steps=cfg["experiment"].get("max_steps_per_episode", 400),
             call_interval=args.interval,

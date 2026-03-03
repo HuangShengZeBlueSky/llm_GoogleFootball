@@ -30,30 +30,40 @@ class GameLogger:
             "episode", "step",
             "ball_x", "ball_y", "active_player", "ball_owner",
             "action_id", "action_name", "reason",
-            "parse_success", "llm_time_ms", "tokens",
+            "parse_success", "parse_path",
+            "llm_time_ms", "tokens", "retry_count", "error_type",
             "reward", "cum_reward", "score_left", "score_right",
+            "raw_prompt", "raw_response",
         ])
 
         self.episode_summaries: list[dict] = []
         self._ep_details: list[dict] = []
+        self._all_latencies_ms: list[float] = []
 
     # ─── per-step ───────────────────────────────────────
 
     def log_step(
         self, *, episode, step, obs,
         action_id, action_name, reason,
-        parse_success, llm_time, tokens,
+        parse_success, parse_path,
+        llm_time, tokens, retry_count, error_type,
+        raw_prompt, raw_response,
         reward, cumulative_reward,
     ):
         ball = obs["ball"]
+        latency_ms = float(llm_time) * 1000
+        self._all_latencies_ms.append(latency_ms)
+
         self._csv.writerow([
             episode, step,
             f"{ball[0]:.4f}", f"{ball[1]:.4f}",
             obs["active"], obs["ball_owned_team"],
             action_id, action_name, reason[:80],
-            parse_success, f"{llm_time*1000:.0f}", tokens,
+            parse_success, parse_path,
+            f"{latency_ms:.0f}", tokens, retry_count, error_type,
             reward, f"{cumulative_reward:.3f}",
             obs["score"][0], obs["score"][1],
+            (raw_prompt or "")[:1000], (raw_response or "")[:1000],
         ])
         self._csv_fh.flush()
 
@@ -64,6 +74,12 @@ class GameLogger:
             "action": int(action_id),
             "action_name": action_name,
             "reason": reason,
+            "parse_path": parse_path,
+            "retry_count": int(retry_count),
+            "error_type": error_type,
+            "llm_time_ms": round(latency_ms, 2),
+            "raw_prompt": raw_prompt,
+            "raw_response": raw_response,
             "reward": float(reward),
         })
 
@@ -78,6 +94,8 @@ class GameLogger:
             "scored": bool(scored),
             "llm_calls": int(llm_stats.get("total_calls", 0)),
             "tokens": int(llm_stats.get("total_tokens", 0)),
+            "latency_p95_ms": float(llm_stats.get("latency_p95_ms", 0.0)),
+            "avg_retry_count": float(llm_stats.get("avg_retry_count", 0.0)),
             "ts": datetime.now().isoformat(),
         }
         self.episode_summaries.append(summary)
@@ -106,6 +124,7 @@ class GameLogger:
             "avg_reward": sum(s["reward"] for s in self.episode_summaries) / max(1, total),
             "avg_steps": sum(s["steps"] for s in self.episode_summaries) / max(1, total),
             "total_tokens": sum(s["tokens"] for s in self.episode_summaries),
+            "latency_p95_ms": round(self._percentile(self._all_latencies_ms, 95), 2),
             "episodes": self.episode_summaries,
         }
 
@@ -125,3 +144,11 @@ class GameLogger:
 
     def close(self):
         self._csv_fh.close()
+
+    @staticmethod
+    def _percentile(values: list[float], p: int) -> float:
+        if not values:
+            return 0.0
+        arr = sorted(values)
+        idx = min(len(arr) - 1, max(0, int(round((p / 100) * (len(arr) - 1)))))
+        return float(arr[idx])
