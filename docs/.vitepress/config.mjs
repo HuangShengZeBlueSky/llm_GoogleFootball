@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-    base: '/llm-google-football/',
+    base: '/llm_GoogleFootball/',
     cleanUrls: true,
 
     head: [
