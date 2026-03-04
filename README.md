@@ -4,6 +4,8 @@
 
 当前主打场景：`academy_3_vs_1_with_keeper`（3名进攻球员对战1名防守球员+门将）。
 
+在线文档：https://huangshengzebluesky.github.io/llm_GoogleFootball/
+online doc:https://huangshengzebluesky.github.io/llm_GoogleFootball/
 ---
 
 ## 🏆 大模型选秀争霸赛排行榜 (Leaderboard)
