@@ -1,5 +1,17 @@
 .env
 grf_logs/
 logs/
+experiment_logs/
 __pycache__/
 *.pyc
+
+# node modules
+node_modules/
+package-lock.json
+
+# vitepress
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+# temp configs
+tmp_config_*.yaml

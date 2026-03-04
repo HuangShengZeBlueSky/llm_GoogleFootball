@@ -1,283 +1,90 @@
-# LLM Google Football
+# 🤖 LLM Google Football Agent
 
-一个“让大模型实时决策玩 Google Research Football（GRF）”的实验仓库。  
-当前默认场景是 `academy_3_vs_1_with_keeper`，支持真实 GRF 环境与 mock 环境。
+一个基于大语言模型（LLM）的自动化足球战术决策框架。让大模型通过“文本观测-逻辑推理-指令输出”的闭环，实时接管 Google Research Football (GRF) 的球场！
 
----
-
-## 1. 项目目标
-
-- 把 GRF 原始观测（`raw obs`）转换成大模型可读文本。
-- 让 LLM 在每 N 步输出离散动作（0~18），并在环境执行。
-- 记录完整实验日志（step / episode / final）用于复盘、调优、评估。
-- 提供可扩展架构：统一 LLM 网关、重试策略、记忆模块。
+当前主打场景：`academy_3_vs_1_with_keeper`（3名进攻球员对战1名防守球员+门将）。
 
 ---
 
-## 2. 仓库结构
+## 🏆 大模型选秀争霸赛排行榜 (Leaderboard)
+
+基于本框架的多模型并行测试脚本，我们在相同环境超参下对四大主流模型进行了公平角逐（胜率优先，平均奖励次之）：
+
+<div align="center">
+
+| 🏅 战绩排名 | 🤖 参赛模型 | ⚽ 进球胜率 | 🌟 场均评分 (Reward) | ⚡ 拔剑速度 (延迟) | 🎯 战术执行步数 | ❌ 脑抽率 (解析失败) |
+| :---: | :--- | :---: | :---: | :---: | :---: | :---: |
+| <h3 style="margin:0;">🥇 冠军</h3> | **`GLM-5`** | <b style="color:green;font-size:1.1em">80.0%</b> | **1.28** | 6.61s | **114.4** 步 | 0.0% |
+| <h3 style="margin:0;">🥈 亚军</h3> | **`Gemini-3.0-Flash`** | <b style="color:blue;font-size:1.1em">40.0%</b> | 1.19 | **4.61s** | 258.4 步 | 0.0% |
+| <h3 style="margin:0;">🥉 季军</h3> | **`Qwen-3-Max`** | <b style="color:orange;font-size:1.1em">20.0%</b> | 1.06 | 5.82s | 331.0 步 | 0.0% |
+| 🛡️ 殿军 | **`Kimi-k2.5`** | <b style="color:red;font-size:1.1em">20.0%</b> | 0.81 | 6.38s | 325.6 步 | 0.0% |
+
+> *测算基准：5局制淘汰赛，最大物理帧400步，模型思考间隔为 5 帧。*
+> **赛事点评**：**`GLM-5`** 展现出统治级的突击破门能力（场均114步闪电战得分），而 **`Gemini-3.0-Flash`** 则斩获了最快的大脑思考速度（4.6秒/步）。所有模型指令解析成功率均达到惊人的 100%！
+
+</div>
+
+---
+
+## 🏗️ 核心架构与原理解析
+
+大模型看不懂视频像素，我们将复杂的 3D 足球环境转化为 LLM 可读懂的文字空间：
+1. **👁 观测转译 (Obs-to-Text)**：将 GRF 的原始 `raw` 字典坐标系，转化为对齐的人类自然语言（例：“我方1号距球门0.3，前方有防守球员”）。
+2. **🧠 大脑推理 (LLM Client)**：系统 Prompt 中预置战术板（跑位拉扯、倒三角传球等原则），按物理帧率定频呼叫大模型输出战术流。
+3. **🦾 动作执剑 (Action Parser)**：将大模型反馈的 JSON/模糊文本（如 `{"action": 12, "reason": "打门!"}`），容错解析并映射到虚拟球场的 19 个硬编码动作方向。
+
+---
+
+## 📂 仓库结构
 
 ```text
 .
-├── llm_football_agent/
-│   ├── run_game.py          # 主入口：加载配置、创建环境、循环决策
-│   ├── llm_client.py        # LLMGateway + Provider Adapter + Retry
-│   ├── obs_to_text.py       # obs -> 文本（详细/紧凑）
-│   ├── action_parser.py     # LLM 输出 -> action_id 容错解析
-│   ├── memory.py            # Working/Episodic 记忆管理
-│   ├── logger.py            # step/episode/final 结构化日志
-│   └── mock_env.py          # 无 GRF 时的模拟环境
+├── llm_football_agent/      # 核心智能体引擎
+│   ├── run_game.py          # ⚽单局游戏主控引擎
+│   ├── llm_client.py        # 🧠统一模型网关接口
+│   ├── obs_to_text.py       # 👁️态势感知模块
+│   ├── action_parser.py     # 🦾指令解析器
+│   └── logger.py            # 📝多模态对战日志器
 ├── configs/
-│   ├── config.yaml          # 主配置
-│   └── config.quick.yaml    # 快速验证配置（短回合）
-├── run_real_game.sh         # 实际运行脚本（conda + compact）
-├── setup_conda_env.sh       # 一键安装依赖与 gfootball
-├── .env.example             # 环境变量模板（不含真实密钥）
-├── logs/                    # 结构化实验日志
-└── grf_logs/                # GRF dump/video 等产物
+│   └── config.yaml          # ⚙️单模型实验主配置文件
+├── run_multiple_experiments.py # 🚀【打榜用】多模型批量评测赛马脚本
+├── parse_leaderboard.py        # 📊【打榜用】自动解析日志产出榜单
+└── experiment_logs/         # 📁实验战绩、JSON回放存档区
 ```
 
 ---
 
-## 3. 核心执行流程（端到端）
+## 🚀 运行案例与使用指南 (Quick Start)
 
-1) 启动入口：`llm_football_agent/run_game.py`  
-2) 配置加载：`config.yaml -> .env 覆盖 -> CLI 覆盖`（CLI 优先级最高）  
-3) 环境创建：真实 GRF 或 `--mock`  
-4) 每回合循环：
-- 每 `interval` 步调用一次 LLM；中间步复用上次动作
-- `obs_to_text` 把观测转文本
-- `memory.build_context()` 拼接记忆上下文
-- `llm.decide()` 请求模型（带重试）
-- `action_parser.parse_action()` 解析 JSON / 数字 / 关键词
-- `env.step(action)` 执行动作
-- `logger.log_step()` 写 step 级日志
+### 1. 环境与密钥准备
 
-5) 回合结束：
-- `memory.end_episode()` 写入 episodic 经验
-- `logger.log_episode_end()` 输出回合摘要
+本系统兼容本地 GFootball 环境与服务器环境（支持 `--mock` 无图形化界面空跑推演）。
+首先配置您的 `.env` 环境变量文件，填入主战车调用大模型的 API：
+```ini
+LLM_API_BASE=https://api.openai.com/v1  # 或你的中转代理 API
+LLM_API_KEY=sk-xxxx...
+LLM_MODEL=gpt-4o  # 你想用的基底主玩模型
+```
 
-6) 全部结束：
-- `logger.save_final_report()` 写汇总报告
+### 2. 模式 A：单骑闯关（跑单个大模型性能测试）
 
----
-
-## 4. 提示词 / obs / think / action 的结构化链路
-
-### 4.1 obs（观测）
-- 输入：GRF raw observation（位置、球权、比分、比赛模式等）。
-- 转换：`obs_to_text.py`
-  - `obs_to_text()`：详细版（信息全）
-  - `obs_to_text_compact()`：紧凑版（省 token）
-
-### 4.2 prompt（提示词）
-`llm_client.py` 内采用模块化系统提示词（`PROMPT_MODULES`）：
-- `role`：角色设定
-- `scenario`：任务与场景
-- `coordinate`：坐标语义
-- `principles`：战术原则
-- `thinking`：内部思考约束（不直接输出推理过程）
-- `output`：强约束 JSON 输出格式
-
-每次请求还会附加：
-- `memory_context`（Working + Episodic 检索）
-- `history`（最近几步决策）
-- 当前 `obs_text`
-
-### 4.3 think（决策）
-- 在模型内部完成态势判断与策略选择。
-- 工程层只接收结构化输出，不依赖“显式思维链”。
-
-### 4.4 action（执行）
-- 模型输出 -> `parse_action()` 容错解析 -> `action_id`。
-- `run_game.py` 调用 `env.step(action_id)` 执行。
-- 非 LLM 调用步复用上一动作（平衡 token 与实时性）。
-
----
-
-## 5. 统一大模型入口（LLMGateway）
-
-文件：`llm_football_agent/llm_client.py`
-
-### 5.1 Provider 适配
-- `openai_compatible`：OpenAI/vLLM/OneAPI 兼容接口
-- `qwen`：当前复用 OpenAI-compatible 协议
-- `gemini_native`：使用 `google-generativeai`（可选依赖）
-
-### 5.2 重试策略
-- 参数：`max_retries`（默认 5）
-- 可重试：`timeout`、`429`、`5xx`
-- 不重试：`4xx` 参数错误
-- 退避：指数退避 `retry_backoff_base * 2^attempt`
-
-### 5.3 统一返回字段
-`decide()` 返回：
-- `raw_response`
-- `tokens`
-- `elapsed`
-- `raw_prompt`
-- `retry_count`
-- `error_type`
-- `provider`
-
----
-
-## 6. 记忆模块
-
-文件：`llm_football_agent/memory.py`
-
-- `WorkingMemory`：短期窗口（最近 N 步）
-- `EpisodicMemory`：跨回合经验片段（检索 top-k）
-- `MemoryManager`：
-  - `on_step()`：写入当前回合轨迹
-  - `build_context()`：构造提示词记忆上下文
-  - `end_episode()`：提炼关键事件并沉淀到 episodic
-
----
-
-## 7. 日志与产物
-
-每次运行生成目录：`logs/session_YYYYMMDD_HHMMSS/`
-
-- `step_log.csv`：逐步日志（关键字段）
-  - `action_id`, `action_name`, `reason`
-  - `parse_success`, `parse_path`
-  - `llm_time_ms`, `tokens`, `retry_count`, `error_type`
-  - `raw_prompt`, `raw_response`
-  - `reward`, `cum_reward`, `score_left`, `score_right`
-
-- `episode_XXX.json`：回合摘要 + step 明细
-- `final_report.json`：总体统计
-  - `score_rate`, `avg_reward`, `avg_steps`
-  - `total_tokens`, `latency_p95_ms`
-
-GRF 侧产物（视频/回放）在：`grf_logs/`
-
----
-
-## 8. 配置说明
-
-主配置：`configs/config.yaml`
-
-### 8.1 llm
-- `model`
-- `provider`
-- `api_key`
-- `base_url`
-- `temperature`
-- `max_tokens`
-- `timeout`
-- `max_retries`
-- `retry_backoff_base`
-
-### 8.2 env
-- `scenario`
-- `representation`
-- `rewards`
-- `render`
-- `write_video`
-- `write_full_episode_dumps`
-- `logdir`
-- `num_controlled_players`
-
-### 8.3 experiment
-- `num_episodes`
-- `max_steps_per_episode`
-- `log_dir`
-
-### 8.4 memory
-- `working_size`
-- `episodic_size`
-- `retrieval_top_k`
-
-配置优先级：`CLI > .env > config.yaml`
-
----
-
-## 9. 快速开始
-
-### 9.1 环境安装
-
+测试你的 `.env` 指定的大模型能否流畅运行与进球：
 ```bash
-bash setup_conda_env.sh
+# 采用 --interval 5 控制每 5 个物理帧呼叫一次 LLM 决策，共测 3 局
+python llm_football_agent/run_game.py --episodes 3 --interval 5
 ```
 
-### 9.2 配置密钥
+### 3. 模式 B：诸神之战（多模型自动赛马实验）
 
+想要一键测定大模型代码能力变迁进度？跑一个自动化赛马拉力测试！
+1. 打开 `run_multiple_experiments.py`，修改 `MODELS_TO_TEST` 数组，填入各家模型参赛选手的 API 细节。
+2. 运行自动化打榜（它会按顺序动态替换参数，互不干扰）：
 ```bash
-cp .env.example .env
-# 编辑 .env，填写 LLM_API_KEY / LLM_API_BASE / LLM_MODEL
+python run_multiple_experiments.py
 ```
-
-> `LLM_API_BASE` 请填写 API 根路径，不要填 `/chat/completions`。
-
-### 9.3 运行
-
-真实环境（推荐脚本）：
-
+3. 执行解析指令。解析器会前往 `experiment_logs` 抓取最新鲜的战斗记录，一键出榜：
 ```bash
-bash run_real_game.sh 5 5
+python parse_leaderboard.py
 ```
 
-手动运行：
-
-```bash
-python llm_football_agent/run_game.py --config configs/config.yaml --episodes 3 --interval 5
-```
-
-Mock 运行（无 gfootball 也可调试）：
-
-```bash
-python llm_football_agent/run_game.py --mock --episodes 2 --interval 5
-```
-
-Gemini 原生 provider：
-
-```bash
-python llm_football_agent/run_game.py --provider gemini_native
-```
-
----
-
-## 10. 安全与密钥防泄露（重要）
-
-### 10.1 当前仓库策略
-- `.env` 已在 `.gitignore` 中。
-- `.env.example` 仅保留空占位，不含真实 key。
-
-### 10.2 提交前建议
-
-```bash
-git status --short
-git diff -- .env
-```
-
-确保 `.env` 没被 `git add`。
-
-### 10.3 历史扫描（建议周期执行）
-
-```bash
-git grep -n -I -E 'sk-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z\-_]{20,}' $(git rev-list --all) --
-```
-
-### 10.4 若已泄露，必须做
-1. 立刻在平台侧轮换/吊销密钥  
-2. 重写 Git 历史（例如 `git filter-repo`）  
-3. 强推后通知协作者重新拉取
-
----
-
-## 11. 常见问题
-
-- `404 Not Found`：通常是 `LLM_API_BASE` 配成了完整 endpoint。请改成根路径。  
-- `Request timed out`：增大 `timeout`，并保留 `max_retries`。  
-- `Gym has been unmaintained...`：兼容性提示，不一定影响当前运行。  
-- 无图形界面服务器：设置 `SDL_VIDEODRIVER=dummy`（脚本已处理）。
-
----
-
-## 12. 后续可扩展方向
-
-- 自动提示词调优（离线评测 + 目标函数）
-- 动作合法性先验过滤（rule-based safety layer）
-- 更强记忆检索（向量化/语义检索）
-- 多 agent 协同（传控/射门/防守角色分工）
+*所有高光录像、回合步骤拆解日志将保存在 `experiment_logs/exp_当前时间戳/` 各个模型的子文件夹内，便于溯源复盘。*

@@ -1,0 +1,38 @@
+[
+  {
+    "model_name": "GLM_5",
+    "score_rate": 0.8,
+    "avg_reward": 1.276,
+    "avg_steps": 114.4,
+    "avg_latency": 6611.239316239316,
+    "error_rate": 0.0,
+    "total_episodes": 5
+  },
+  {
+    "model_name": "Gemini_3_0_Flash",
+    "score_rate": 0.4,
+    "avg_reward": 1.194,
+    "avg_steps": 258.4,
+    "avg_latency": 4610.810810810811,
+    "error_rate": 0.0,
+    "total_episodes": 5
+  },
+  {
+    "model_name": "Qwen_3_Max",
+    "score_rate": 0.2,
+    "avg_reward": 1.064,
+    "avg_steps": 331.0,
+    "avg_latency": 5828.513595166163,
+    "error_rate": 0.0,
+    "total_episodes": 5
+  },
+  {
+    "model_name": "Kimi_k2_5",
+    "score_rate": 0.2,
+    "avg_reward": 0.808,
+    "avg_steps": 325.6,
+    "avg_latency": 6389.0920245398775,
+    "error_rate": 0.0,
+    "total_episodes": 5
+  }
+]
