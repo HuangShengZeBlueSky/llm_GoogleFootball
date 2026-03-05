@@ -32,7 +32,8 @@ def _build_llm_client(model: str) -> LLMClient:
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--model", type=str, default="Gemini-3.0-Flash", help="用于跑游戏和当裁判的大模型")
+    default_model = os.getenv("LLM_MODEL", "gemini-3-flash-preview")
+    p.add_argument("--model", type=str, default=default_model, help="用于跑游戏和当裁判的大模型")
     p.add_argument("--generations", type=int, default=3, help="进化的代数")
     p.add_argument("--episodes", type=int, default=5, help="每一代跑多少局验证")
     p.add_argument("--max_steps", type=int, default=200, help="每局最大物理帧")
