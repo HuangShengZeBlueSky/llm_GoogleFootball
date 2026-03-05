@@ -11,6 +11,9 @@ load_dotenv()
 DEFAULT_API_KEY = os.getenv("LLM_API_KEY", "YOUR_API_KEY")
 DEFAULT_BASE_URL = os.getenv("LLM_API_BASE", "YOUR_BASE_URL")
 
+ZAIWEN_API_BASE = os.getenv("ZAIWEN_API_BASE", "https://back.zaiwenai.com/api/v1/ai")
+ZAIWEN_API_KEY = os.getenv("ZAIWEN_API_KEY", "")
+
 # --- 实验配置: 在这里定义你想一次性测试的模型 ---
 # 包含不同的模型名称和它们的API参数
 # 你可以在这里配置: model, api_key, base_url, provider, api_timeout 等
@@ -19,37 +22,37 @@ MODELS_TO_TEST = [
         "name": "Kimi_k2_5",
         "model": "kimi-k2.5",
         "provider": "openai_compatible",
-        "api_key": DEFAULT_API_KEY,
-        "base_url": DEFAULT_BASE_URL
+        "api_key": ZAIWEN_API_KEY,
+        "base_url": ZAIWEN_API_BASE
     },
     {
         "name": "GLM_5",
         "model": "GLM-5",
         "provider": "openai_compatible",
-        "api_key": DEFAULT_API_KEY,
-        "base_url": DEFAULT_BASE_URL
+        "api_key": ZAIWEN_API_KEY,
+        "base_url": ZAIWEN_API_BASE
     },
     {
         "name": "Gemini_3_0_Flash",
         "model": "Gemini-3.0-Flash",
         "provider": "openai_compatible",
-        "api_key": DEFAULT_API_KEY,
-        "base_url": DEFAULT_BASE_URL
+        "api_key": ZAIWEN_API_KEY,
+        "base_url": ZAIWEN_API_BASE
     },
     {
         "name": "Qwen_3_Max",
         "model": "Qwen-3-Max",
         "provider": "openai_compatible",
-        "api_key": DEFAULT_API_KEY,
-        "base_url": DEFAULT_BASE_URL
+        "api_key": ZAIWEN_API_KEY,
+        "base_url": ZAIWEN_API_BASE
     }
 ]
 
 # 公共实验参数
 CONFIG_FILE = "configs/config.yaml"
-EPISODES_PER_MODEL = 5               # 每个模型跑的回合数
-INTERVAL_STEPS = 5                   # 调用周期: 每隔5步让模型输出一次动作
-MAX_STEPS_OVERRIDE = 400             # 恢复到400，让物理引擎有足够的时间跑到终点
+EPISODES_PER_MODEL = 5               # 每个模型跑的回合数 (如果要短一点测试，可以改成 2或3)
+INTERVAL_STEPS = 1                   # 调用周期: 每1步让模型输出一次动作
+MAX_STEPS_OVERRIDE = 50              # 每局最多50步
 MAIN_LOG_DIR = "./experiment_logs"   # 统一存放本次大规模实验的数据
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 

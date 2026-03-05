@@ -35,7 +35,7 @@ def main():
     p.add_argument("--model", type=str, default="Gemini-3.0-Flash", help="用于跑游戏和当裁判的大模型")
     p.add_argument("--generations", type=int, default=3, help="进化的代数")
     p.add_argument("--episodes", type=int, default=5, help="每一代跑多少局验证")
-    p.add_argument("--max_steps", type=int, default=400, help="每局最大物理帧")
+    p.add_argument("--max_steps", type=int, default=50, help="每局最大物理帧")
     args = p.parse_args()
 
     exp_id = f"evo_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -96,6 +96,7 @@ def main():
         cmd = [
             "python", "llm_football_agent/run_game.py",
             "--config", tmp_cfg_path,
+            "--interval", "1"
         ]
         
         # 隐藏大部分输出，只保留错误
