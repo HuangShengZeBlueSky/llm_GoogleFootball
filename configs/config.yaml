@@ -6,7 +6,7 @@ llm:
   api_key: ""                             # 从 .env 加载
   base_url: ""                            # 从 .env 加载
   temperature: 0.3
-  max_tokens: 256
+  max_tokens: 1024
   timeout: 10
   max_retries: 5
   retry_backoff_base: 0.8

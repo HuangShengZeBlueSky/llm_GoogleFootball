@@ -50,9 +50,9 @@ MODELS_TO_TEST = [
 
 # 公共实验参数
 CONFIG_FILE = "configs/config.yaml"
-EPISODES_PER_MODEL = 5               # 每个模型跑的回合数 (如果要短一点测试，可以改成 2或3)
-INTERVAL_STEPS = 1                   # 调用周期: 每1步让模型输出一次动作
-MAX_STEPS_OVERRIDE = 50              # 每局最多50步
+EPISODES_PER_MODEL = 10              # 每个模型跑的回合数
+INTERVAL_STEPS = 5                   # 调用周期: 每隔5步让模型输出一次动作
+MAX_STEPS_OVERRIDE = 200             # 每局最多200步
 MAIN_LOG_DIR = "./experiment_logs"   # 统一存放本次大规模实验的数据
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
