@@ -104,21 +104,23 @@ def main():
         subprocess.check_call(cmd, stdout=subprocess.DEVNULL)
         
         # 4. 分析本代胜率
-        final_reports = glob.glob(os.path.join(gen_dir, "ep_*/final_report.json"))
+        final_reports = glob.glob(os.path.join(gen_dir, "**", "final_report.json"), recursive=True)
         scored = 0
+        total_episodes = 0
         for r in final_reports:
             with open(r, "r") as f:
-                if json.load(f).get("scored", False):
-                    scored += 1
-                    
-        win_rate = (scored / len(final_reports)) if final_reports else 0
-        print(f"\n[ Gen {gen} 结束 ] 胜率: {win_rate*100:.1f}% ({scored}/{len(final_reports)})")
+                report = json.load(f)
+                scored += report.get("scored_episodes", 0)
+                total_episodes += report.get("total_episodes", 0)
+                     
+        win_rate = (scored / total_episodes) if total_episodes else 0
+        print(f"\n[ Gen {gen} 结束 ] 胜率: {win_rate*100:.1f}% ({scored}/{total_episodes})")
         
         stats_log.append({
             "generation": gen,
             "win_rate": win_rate,
             "wins": scored,
-            "total": len(final_reports),
+            "total": total_episodes,
             "principles": current_principles
         })
         
