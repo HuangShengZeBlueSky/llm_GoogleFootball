@@ -82,15 +82,16 @@ def main():
     args = p.parse_args()
 
     # 决定用哪个 provider/model
-    # 优先级: CLI > GEMINI_* env vars > LLM_* env vars
-    provider = args.provider or os.getenv("LLM_PROVIDER", "openai_compatible")
-    model = args.model or os.getenv("GEMINI_MODEL") or os.getenv("LLM_MODEL", "gemini-3-flash-preview")
+    # Test 实验默认走 Gemini 原生 API (不走 Zaiwen 代理)
+    provider = args.provider or "gemini_native"
+    model = args.model or os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 
-    # API key: 如果是 gemini_native, 用 GEMINI_API_KEY; 否则用 LLM_API_KEY
-    if provider in ("gemini_native", "gemini", "google"):
-        api_key = os.getenv("GEMINI_API_KEY", os.getenv("LLM_API_KEY", ""))
-        api_base = ""
-    else:
+    # API key: Test 实验专用 GEMINI_API_KEY
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    api_base = ""
+
+    if provider not in ("gemini_native", "gemini", "google"):
+        # 如果用户手动指定了其他 provider，则切换到对应的 key
         api_key = os.getenv("LLM_API_KEY", "")
         api_base = os.getenv("LLM_API_BASE", "")
 
