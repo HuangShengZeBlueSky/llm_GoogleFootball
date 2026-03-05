@@ -241,6 +241,10 @@ def main():
                    help="请求失败最大重试次数")
     p.add_argument("--timeout", type=float, default=None,
                    help="单次请求超时秒数")
+    p.add_argument("--principles_file", type=str, default=None,
+                   help="指向包含 custom principles 的文本文件路径")
+    p.add_argument("--empty_principles", action="store_true", default=False,
+                   help="开启0原则模式 (Base组)")
     args = p.parse_args()
 
     # 加载配置: config.yaml → .env 覆盖 → CLI 覆盖
@@ -266,6 +270,16 @@ def main():
     use_mock = args.mock
     mode_str = "模拟环境" if (use_mock or not _HAS_GRF) else "GRF 真实环境"
 
+    # 读取自定义战术原则
+    custom_principles_text = None
+    if args.empty_principles or cfg.get("experiment", {}).get("empty_principles", False):
+        custom_principles_text = ""
+    else:
+        princ_file = args.principles_file or cfg.get("experiment", {}).get("principles_file")
+        if princ_file and os.path.exists(princ_file):
+            with open(princ_file, "r", encoding="utf-8") as pf:
+                custom_principles_text = pf.read().strip()
+
     print(f"{'='*50}")
     print(f"LLM Football Agent — academy_3_vs_1_with_keeper")
     print(f"Model:    {cfg['llm']['model']}")
@@ -285,6 +299,7 @@ def main():
         timeout=cfg["llm"].get("timeout", 10.0),
         max_retries=cfg["llm"].get("max_retries", 5),
         retry_backoff_base=cfg["llm"].get("retry_backoff_base", 0.8),
+        custom_principles=custom_principles_text,
     )
     logger = GameLogger(cfg["experiment"]["log_dir"])
     memory = MemoryManager(

@@ -140,6 +140,7 @@ class LLMGateway:
         timeout: float = 10.0,
         max_retries: int = 5,
         retry_backoff_base: float = 0.8,
+        custom_principles: str | None = None,
     ):
         self.model = model
         self.provider = provider
@@ -159,6 +160,17 @@ class LLMGateway:
         self.call_count = 0
         self.latencies: list[float] = []
         self.retry_hist: list[int] = []
+
+        # 构建 System Prompt
+        modules = dict(PROMPT_MODULES)
+        if custom_principles is not None:
+            if custom_principles.strip() == "":
+                # 0原则启动（Base）
+                if "principles" in modules:
+                    del modules["principles"]
+            else:
+                modules["principles"] = f"【核心战术原则】\n{custom_principles.strip()}"
+        self.system_prompt = "\n\n".join(modules.values())
 
     def _create_adapter(self, *, provider: str, api_key: str, base_url: str | None, timeout: float) -> ProviderAdapter:
         p = (provider or "openai_compatible").strip().lower()
@@ -187,7 +199,7 @@ class LLMGateway:
                 raw_response, elapsed, tokens, raw_prompt,
                 retry_count, error_type[, error]
         """
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        messages = [{"role": "system", "content": self.system_prompt}]
 
         if memory_context:
             messages.append({"role": "user", "content": f"【记忆检索】\n{memory_context}"})
