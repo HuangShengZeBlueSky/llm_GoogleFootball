@@ -88,14 +88,16 @@ class GeminiNativeAdapter(ProviderAdapter):
     def __init__(self, api_key: str, timeout: float):
         self.timeout = timeout
         try:
-            genai = importlib.import_module("google.generativeai")
-        except Exception as exc:
+            from google import genai
+            from google.genai import types
+            self.genai = genai
+            self.types = types
+        except ImportError as exc:
             raise ImportError(
-                "Gemini native 适配器需要安装 google-generativeai。"
+                "Gemini native 适配器需要安装 google-genai。请运行: pip install google-genai"
             ) from exc
 
-        genai.configure(api_key=api_key)
-        self._genai = genai
+        self.client = self.genai.Client(api_key=api_key)
 
     def generate(self, *, model: str, messages: list[dict], temperature: float, max_tokens: int) -> dict:
         prompt = []
@@ -109,15 +111,18 @@ class GeminiNativeAdapter(ProviderAdapter):
                 prompt.append(f"[user]\n{item.get('content', '')}")
 
         text_prompt = "\n\n".join(prompt)
-        model_obj = self._genai.GenerativeModel(model_name=model)
-        resp = model_obj.generate_content(
-            text_prompt,
-            generation_config={
-                "temperature": temperature,
-                "max_output_tokens": max_tokens,
-            },
-            request_options={"timeout": self.timeout},
+        
+        config = self.types.GenerateContentConfig(
+            temperature=temperature,
+            max_output_tokens=max_tokens,
         )
+
+        resp = self.client.models.generate_content(
+            model=model,
+            contents=text_prompt,
+            config=config,
+        )
+        
         raw = (getattr(resp, "text", None) or "").strip()
         usage_meta = getattr(resp, "usage_metadata", None)
         tokens = 0
