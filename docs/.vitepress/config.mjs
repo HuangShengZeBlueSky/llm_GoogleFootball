@@ -42,6 +42,13 @@ export default withMermaid(
                                     { text: '实验配置', link: '/guide/configuration' },
                                     { text: '多模型批量测试', link: '/guide/batch-testing' }
                                 ]
+                            },
+                            {
+                                text: '评测与数据',
+                                items: [
+                                    { text: '诸神之战 (Leaderboard)', link: '/leaderboard' },
+                                    { text: '战术演化与诊断 (Evolution)', link: '/evolution' }
+                                ]
                             }
                         ]
                     },
@@ -81,6 +88,13 @@ export default withMermaid(
                                     { text: 'Architecture & IPO', link: '/en/guide/architecture' },
                                     { text: 'Configuration', link: '/en/guide/configuration' },
                                     { text: 'Batch Testing', link: '/en/guide/batch-testing' }
+                                ]
+                            },
+                            {
+                                text: 'Evaluation & Data',
+                                items: [
+                                    { text: 'Leaderboard', link: '/en/leaderboard' },
+                                    { text: 'Tactical Evolution', link: '/en/evolution' }
                                 ]
                             }
                         ]
